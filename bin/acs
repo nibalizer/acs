@@ -1,0 +1,42 @@
+#!/bin/bash -eu
+
+
+tgt=$1
+
+if [ -z $tgt ]; then
+    echo "error"
+    echo "usage: $0 <dir>"
+    exit 1
+fi
+
+if [ $tgt = "clear-all" ]; then
+    echo "clearing all ai code scaffolds"
+    mount | grep overlay | grep acs
+    echo "clearing all ai code scaffolds"
+    for m in $(mount | grep overlay | grep acs | awk '{print $3}')
+    do
+        sudo umount $m
+    done
+    exit 0
+fi
+
+
+tempID=$(uuidgen -7)
+scaffoldID=${2:-${tempID}}
+
+echo "Creating ai code scaffold for $tgt"
+echo "Scaffolding with id $scaffoldID"
+slug=~/.acs/${scaffoldID}
+mkdir -p ${slug}/{upperdir,workdir,merged}
+
+sudo mount -t overlay overlay -o "lowerdir=${tgt},upperdir=${slug}/upperdir,workdir=${slug}/workdir" "${slug}/merged"
+
+echo "overlay created!"
+echo "close overlay with umount ${slug}/merged"
+echo "changes will be tracked here ${slug}/upperdir"
+echo "do your work here:"
+echo "${slug}/merged"
+
+acs-start-amp.sh ${slug}/merged
+
+
