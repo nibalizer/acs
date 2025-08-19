@@ -20,6 +20,11 @@ if [ $tgt = "clear-all" ]; then
     exit 0
 fi
 
+runagent=amp
+if [ $AGENT = "claude" ]; then
+    runagent=claude
+fi
+
 
 tempID=$(uuidgen -7)
 scaffoldID=${2:-${tempID}}
@@ -37,6 +42,7 @@ echo "changes will be tracked here ${slug}/upperdir"
 echo "do your work here:"
 echo "${slug}/merged"
 
-acs-start-amp.sh ${slug}/merged
+acs-start-${runagent}.sh ${slug}/merged
 
-
+echo "Work is ready for review here:"
+echo "${slug}/merged"

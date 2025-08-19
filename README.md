@@ -15,3 +15,20 @@ export PATH=${PATH}:/`pwd`/acs/bin
 cd <myproject>
 acs .
 ```
+
+## amp
+
+To use amp
+
+```bash
+acs .
+```
+
+
+## claude
+
+To use claude code
+
+```bash
+AGENT=claude acs .
+```
