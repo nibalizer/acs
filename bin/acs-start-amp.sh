@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Run amp in docker
 # arguments:
 #   <dir> Location of code to give to amp
