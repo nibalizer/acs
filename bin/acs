@@ -1,48 +1,163 @@
-#!/bin/bash -eu
+#!/usr/bin/env bash
 
+set -eu
 
-tgt=$1
+# Just in case `acs` is symlinked, we want to resolve the actual path to find
+# the acs-start-* scripts
+ACS_DIR="$(dirname "$(realpath "$(command -v "$0")")")"
 
-if [ -z $tgt ]; then
-    echo "error"
-    echo "usage: $0 <dir>"
+function usage() {
+  command_name=$(basename "$0")
+  echo "Usage: $command_name start <dir> [<scaffold-id>] [--agent <amp|claude>]"
+  echo "       $command_name clear <all|scaffold-id>"
+  echo "       $command_name list"
+  echo "       $command_name help"
+  echo ""
+  echo "Commands:"
+  echo "       start: <dir> is the directory to scaffold, e.g. /home/user/project"
+  echo "              <scaffold-id> is an optional unique identifier for the scaffold"
+  echo "              --agent is the agent to use, e.g. amp or claude"
+  echo "       clear: clears one or all ai code scaffolds"
+  echo "       list:  lists all ai code scaffolds"
+  echo "       help:  shows this help message"
+}
+
+function list_scaffolds() {
+  if [ -d ~/.acs ]; then
+    echo "Listing all ai code scaffolds:"
+    ls -l ~/.acs
+  else
+    echo "No ai code scaffolds found"
+  fi
+}
+
+function clear_scaffold() {
+  local scaffold_id="${1:-}"
+  if [ -z "$scaffold_id" ]; then
+    echo "Error: Scaffold ID or 'all' is required for clearing"
+    usage
     exit 1
-fi
-
-if [ $tgt = "clear-all" ]; then
-    echo "clearing all ai code scaffolds"
-    mount | grep overlay | grep acs
-    echo "clearing all ai code scaffolds"
-    for m in $(mount | grep overlay | grep acs | awk '{print $3}')
-    do
-        sudo umount $m
+  fi
+  if [ "$scaffold_id" = "all" ]; then
+    echo "Clearing all ai code scaffolds..."
+    if [ ! -d ~/.acs ]; then
+      echo "No ai code scaffolds found to clear"
+      return
+    fi
+    for dir in ~/.acs/*; do
+      echo "Unmounting and removing scaffold at: $dir"
+      sudo umount "$dir/merged" || true
+      rm -rf "$dir"
     done
+    echo "All scaffolds cleared"
+    return
+  fi
+  if [ -d ~/.acs/"$scaffold_id" ]; then
+    echo "Clearing scaffold with ID: $scaffold_id"
+    dir=~/.acs/"$scaffold_id"
+    sudo umount "$dir/merged" || true
+    rm -rf "$dir"
+    echo "Scaffold with ID '$scaffold_id' cleared"
+  else
+    echo "Error: Scaffold ID '$scaffold_id' does not exist"
+  fi
+}
+
+function start_agent() {
+  local runagent="${AGENT:-amp}"
+  local runagent_script
+  runagent_script="$ACS_DIR/acs-start-${runagent}.sh"
+  local target_dir
+  target_dir="${1:-}"
+
+  if [ -z "$target_dir" ]; then
+    echo "Error: Directory to scaffold for agent is required"
+    usage
+    exit 1
+  fi
+  if [ ! -d "$target_dir" ]; then
+    echo "Error: Target directory '$target_dir' does not exist"
+    exit 1
+  fi
+  if [ ! -x "$(command -v "$runagent_script")" ]; then
+    echo "Error: acs-start-${runagent}.sh script not found. Please ensure it is in your PATH or pick a different agent"
+    exit 1
+  fi
+  if [ ! -d ~/.acs ]; then
+    echo "Creating directory for ai code scaffolds: ~/.acs"
+    mkdir -p ~/.acs
+  fi
+
+  tempID=$(uuidgen -7)
+  scaffoldID=${2:-${tempID}}
+
+  echo "Creating ai code scaffold for $target_dir"
+  echo "Scaffolding with id $scaffoldID"
+  slug=~/.acs/${scaffoldID}
+  mkdir -p "${slug}"/{upperdir,workdir,merged}
+
+  sudo mount -t overlay overlay -o "lowerdir=${target_dir},upperdir=${slug}/upperdir,workdir=${slug}/workdir" "${slug}/merged"
+
+  echo "overlay created!"
+  echo "close overlay with umount ${slug}/merged"
+  echo "changes will be tracked here ${slug}/upperdir"
+  echo "do your work here:"
+  echo "${slug}/merged"
+
+  "$runagent_script" "$slug"/merged
+
+  echo "Work is ready for review here:"
+  echo "${slug}/merged"
+}
+
+# Parse command line flags
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --agent)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --agent requires an argument"
+        usage
+        exit 1
+      fi
+      AGENT="$2"
+      shift
+      shift
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${POSITIONAL_ARGS[@]}"
+
+# Parse positional arguments
+COMMAND="${1:-}"
+if [ -z "$COMMAND" ]; then
+  usage
+  exit 1
+fi
+shift
+case "$COMMAND" in
+  start)
+    start_agent "$@"
     exit 0
-fi
+    ;;
+  clear)
+    clear_scaffold "$@"
+    ;;
+  list)
+    list_scaffolds
+    exit 0
+    ;;
+  help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Error: Invalid command '$COMMAND'"
+    usage
+    exit 1
+    ;;
+esac
 
-runagent=amp
-if [ $AGENT = "claude" ]; then
-    runagent=claude
-fi
-
-
-tempID=$(uuidgen -7)
-scaffoldID=${2:-${tempID}}
-
-echo "Creating ai code scaffold for $tgt"
-echo "Scaffolding with id $scaffoldID"
-slug=~/.acs/${scaffoldID}
-mkdir -p ${slug}/{upperdir,workdir,merged}
-
-sudo mount -t overlay overlay -o "lowerdir=${tgt},upperdir=${slug}/upperdir,workdir=${slug}/workdir" "${slug}/merged"
-
-echo "overlay created!"
-echo "close overlay with umount ${slug}/merged"
-echo "changes will be tracked here ${slug}/upperdir"
-echo "do your work here:"
-echo "${slug}/merged"
-
-acs-start-${runagent}.sh ${slug}/merged
-
-echo "Work is ready for review here:"
-echo "${slug}/merged"

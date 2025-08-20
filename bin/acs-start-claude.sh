@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Run claude in docker
 # arguments:
 #   <dir> Location of code to give to amp
