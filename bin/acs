@@ -8,18 +8,21 @@ ACS_DIR="$(dirname "$(realpath "$(command -v "$0")")")"
 
 function usage() {
   command_name=$(basename "$0")
-  echo "Usage: $command_name start <dir> [<scaffold-id>] [--agent <amp|claude>]"
+  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>]"
+  echo "       $command_name resume <scaffold-id> [-t|--thread-id <thread-id>]"
   echo "       $command_name clear <all|scaffold-id>"
   echo "       $command_name list"
   echo "       $command_name help"
   echo ""
   echo "Commands:"
-  echo "       start: <dir> is the directory to scaffold, e.g. /home/user/project"
-  echo "              <scaffold-id> is an optional unique identifier for the scaffold"
-  echo "              --agent is the agent to use, e.g. amp or claude"
-  echo "       clear: clears one or all ai code scaffolds"
-  echo "       list:  lists all ai code scaffolds"
-  echo "       help:  shows this help message"
+  echo "       start:  <dir> is the directory to scaffold, e.g. /home/user/project"
+  echo "               -s|--scaffold-id <scaffold-id> is an optional unique identifier for the scaffold"
+  echo "               -a|--agent <agent> is the agent to use, e.g. amp or claude"
+  echo "       resume: resumes an existing scaffold with the given scaffold-id"
+  echo "               -t|--thread-id <thread-id> is an optional amp thread ID to resume"
+  echo "       clear:  clears one or all ai code scaffolds"
+  echo "       list:   lists all ai code scaffolds"
+  echo "       help:   shows this help message"
 }
 
 function list_scaffolds() {
@@ -63,6 +66,36 @@ function clear_scaffold() {
   fi
 }
 
+function resume_agent() {
+  local scaffold_id="${1:-}"
+  if [ -z "$scaffold_id" ]; then
+    echo "Error: Scaffold ID is required for resuming"
+    usage
+    exit 1
+  fi
+  if [ ! -d ~/.acs/"$scaffold_id" ]; then
+    echo "Error: Scaffold ID '$scaffold_id' does not exist"
+    exit 1
+  fi
+
+  local runagent="${AGENT:-amp}"
+  local runagent_script
+  runagent_script="$ACS_DIR/acs-start-${runagent}.sh"
+
+  if [ ! -x "$(command -v "$runagent_script")" ]; then
+    echo "Error: acs-start-${runagent}.sh script not found. Please ensure it is in your PATH or pick a different agent"
+    exit 1
+  fi
+
+  if [ -z "$THREAD_ID" ]; then
+    echo "Resuming scaffold with ID: $scaffold_id"
+    "$runagent_script" ~/.acs/"$scaffold_id"/merged
+  else
+    echo "Resuming scaffold with ID: $scaffold_id and thread ID: $THREAD_ID"
+    "$runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID"
+  fi
+}
+
 function start_agent() {
   local runagent="${AGENT:-amp}"
   local runagent_script
@@ -88,13 +121,16 @@ function start_agent() {
     mkdir -p ~/.acs
   fi
 
-  tempID=$(uuidgen -7)
-  scaffoldID=${2:-${tempID}}
+  scaffoldID=${SCAFFOLD_ID:-$(uuidgen -7)}
 
-  echo "Creating ai code scaffold for $target_dir"
-  echo "Scaffolding with id $scaffoldID"
-  slug=~/.acs/${scaffoldID}
-  mkdir -p "${slug}"/{upperdir,workdir,merged}
+  slug="$HOME/.acs/$scaffoldID"
+  if [ ! -d "$slug" ]; then
+    echo "Creating ai code scaffold for $target_dir"
+    mkdir -p "${slug}"/{upperdir,workdir,merged}
+  else
+    echo "Error: Scaffold ID '$scaffoldID' already exists. Please choose a different ID or clear or resume the existing scaffold."
+    exit 1
+  fi
 
   sudo mount -t overlay overlay -o "lowerdir=${target_dir},upperdir=${slug}/upperdir,workdir=${slug}/workdir" "${slug}/merged"
 
@@ -113,13 +149,33 @@ function start_agent() {
 # Parse command line flags
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --agent)
+    -s|--scaffold-id)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --scaffold-id requires an argument"
+        usage
+        exit 1
+      fi
+      SCAFFOLD_ID="$2"
+      shift
+      shift
+      ;;
+    -a|--agent)
       if [[ -z "${2:-}" ]]; then
         echo "Error: --agent requires an argument"
         usage
         exit 1
       fi
       AGENT="$2"
+      shift
+      shift
+      ;;
+    -t|--thread-id)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --thread-id requires an argument"
+        usage
+        exit 1
+      fi
+      THREAD_ID="$2"
       shift
       shift
       ;;
@@ -141,6 +197,10 @@ shift
 case "$COMMAND" in
   start)
     start_agent "$@"
+    exit 0
+    ;;
+  resume)
+    resume_agent "$@"
     exit 0
     ;;
   clear)
