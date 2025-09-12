@@ -8,7 +8,7 @@ ACS_DIR="$(dirname "$(realpath "$(command -v "$0")")")"
 
 function usage() {
   command_name=$(basename "$0")
-  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>]"
+  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>] [-S|--services-file]"
   echo "       $command_name resume <scaffold-id> [-t|--thread-id <thread-id>]"
   echo "       $command_name clear <all|scaffold-id>"
   echo "       $command_name list"
@@ -18,6 +18,7 @@ function usage() {
   echo "       start:  <dir> is the directory to scaffold, e.g. /home/user/project"
   echo "               -s|--scaffold-id <scaffold-id> is an optional unique identifier for the scaffold"
   echo "               -a|--agent <agent> is the agent to use, e.g. amp or claude"
+  echo "               -S|--services-file <file.yaml> contains docker services to run in the same docker network as your acs container"
   echo "       resume: resumes an existing scaffold with the given scaffold-id"
   echo "               -t|--thread-id <thread-id> is an optional amp thread ID to resume"
   echo "       clear:  clears one or all ai code scaffolds"
@@ -92,7 +93,8 @@ function resume_agent() {
     "$runagent_script" ~/.acs/"$scaffold_id"/merged
   else
     echo "Resuming scaffold with ID: $scaffold_id and thread ID: $THREAD_ID"
-    "$runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID"
+    # todo more logic for if services_file is defined
+    "$runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID" "$SERVICES_FILE"
   fi
 }
 
@@ -176,6 +178,16 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       THREAD_ID="$2"
+      shift
+      shift
+      ;;
+  -S|--services-file)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --services-file requires an argument"
+        usage
+        exit 1
+      fi
+      SERVICES_FILE="$2"
       shift
       shift
       ;;
