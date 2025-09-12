@@ -6,6 +6,7 @@
 
 CODE_DIR=$1
 THREAD_ID=$2
+DOCKER_NETWORK=$3
 
 if [ -z $CODE_DIR ]; then
     echo "error"
@@ -15,6 +16,7 @@ fi
 
 # for debuging add this to run below
 #    --entrypoint=/bin/bash \
+
 
 docker run \
     -it \
