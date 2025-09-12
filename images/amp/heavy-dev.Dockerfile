@@ -1,8 +1,14 @@
 FROM node:20-bookworm
 
-
-RUN mkdir /src/
-RUN apt-get update
+# Install common build tools that might be needed
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    ca-certificates \
+    postgresql-client \
+    sudo \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Go
 RUN apt-get install -y wget && \
@@ -16,35 +22,27 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 # Create Go workspace
 RUN mkdir -p /go/src /go/bin /go/pkg
 
-# Install common build tools that might be needed
-RUN apt-get install -y \
-    build-essential \
-    git \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
 
 # Install Just
 RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+RUN mkdir /src/
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN npm install -g @sourcegraph/amp
+RUN usermod -l amp -d /home/amp -m node
+RUN usermod -a -G sudo amp
+RUN chown -R amp /src
+USER amp
+WORKDIR /src
+
+# Set Go environment variables
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Verify installations
 RUN node --version && \
     npm --version && \
     go version && \
     just --version
-
-RUN apt-get update && apt-get install -y ripgrep
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-RUN npm install -g @anthropic-ai/claude-code
-RUN usermod -l claude -d /home/claude -m node
-RUN chown -R claude /src
-USER claude
-RUN mkdir $HOME/.claude
-WORKDIR /src
-
-# Set Go environment variables
-ENV PATH="/usr/local/go/bin:${PATH}"
-
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -15,10 +15,19 @@ fi
 
 # for debuging add this to run below
 #    --entrypoint=/bin/bash \
+#
+docker_network=""
+if [ -z $NETWORK ]; then
+    :
+else
+    docker_network="--network $NETWORK"
+fi
+
 
 docker run \
     -it \
     --rm \
+    $docker_network \
     -e THREAD_ID=$THREAD_ID \
     -v ~/.cache/amp/:/home/amp/.cache/amp/ \
     -v ~/.amp/:/home/amp/.amp \

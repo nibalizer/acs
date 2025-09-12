@@ -8,8 +8,8 @@ ACS_DIR="$(dirname "$(realpath "$(command -v "$0")")")"
 
 function usage() {
   command_name=$(basename "$0")
-  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>]"
-  echo "       $command_name resume <scaffold-id> [-t|--thread-id <thread-id>]"
+  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>] [-n|--network <docker network>]"
+  echo "       $command_name resume <scaffold-id> [-t|--thread-id <thread-id>] [-n|--network <docker network>]"
   echo "       $command_name clear <all|scaffold-id>"
   echo "       $command_name list"
   echo "       $command_name help"
@@ -82,6 +82,8 @@ function resume_agent() {
   local runagent_script
   runagent_script="$ACS_DIR/acs-start-${runagent}.sh"
 
+
+
   if [ ! -x "$(command -v "$runagent_script")" ]; then
     echo "Error: acs-start-${runagent}.sh script not found. Please ensure it is in your PATH or pick a different agent"
     exit 1
@@ -89,10 +91,10 @@ function resume_agent() {
 
   if [ -z "$THREAD_ID" ]; then
     echo "Resuming scaffold with ID: $scaffold_id"
-    "$runagent_script" ~/.acs/"$scaffold_id"/merged
+    NETWORK=${NETWORK:-""} "$runagent_script" ~/.acs/"$scaffold_id"/merged
   else
     echo "Resuming scaffold with ID: $scaffold_id and thread ID: $THREAD_ID"
-    "$runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID"
+    "NETWORK=${NETWORK:-""} $runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID"
   fi
 }
 
@@ -140,7 +142,7 @@ function start_agent() {
   echo "do your work here:"
   echo "${slug}/merged"
 
-  "$runagent_script" "$slug"/merged
+  NETWORK=${NETWORK:-""} "$runagent_script" "$slug"/merged
 
   echo "Work is ready for review here:"
   echo "${slug}/merged"
@@ -166,6 +168,16 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       AGENT="$2"
+      shift
+      shift
+      ;;
+    -n|--network)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --network requires an argument"
+        usage
+        exit 1
+      fi
+      NETWORK="$2"
       shift
       shift
       ;;

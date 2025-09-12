@@ -33,9 +33,17 @@ cat ~/.claude.json | jq '.projects = {
     }
   }' > $claude_json
 
+docker_network=""
+if [ -z $NETWORK ]; then
+    :
+else
+    docker_network="--network $NETWORK"
+fi
+
 docker run \
     -it \
     --rm \
+    $docker_network \
     -v ~/.claude/.credentials.json:/home/claude/.claude/.credentials.json \
     -v $CODE_DIR:/src \
     -v $claude_json:/home/claude/.claude.json \

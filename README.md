@@ -11,9 +11,12 @@ Ever wanted to run AI coding agents in parallel on the same project? Isolate the
 
 ```
 git clone https://github.com/nibalizer/acs
+cd acs/images/claude
+docker build -t clauderunner .
+cd -
 export PATH=${PATH}:/`pwd`/acs/bin
 cd <myproject>
-acs .
+acs start --agent claude .
 ```
 
 ## amp
@@ -21,7 +24,7 @@ acs .
 To use amp
 
 ```bash
-acs .
+acs start --agent amp .
 ```
 
 
@@ -30,5 +33,20 @@ acs .
 To use claude code
 
 ```bash
-AGENT=claude acs .
+acs start --agent claude .
+```
+
+## Connecting services
+
+ACS can connect to an existing docker network to allow it to connect to services e.g. postgres or your app.
+
+```
+cd examples/postgres
+docker compose -f postgres_service.yaml up -d
+docker network ls
+acs start --agent amp --network postgres_default .
+
+# in amp
+$ ./testdb.sh
+
 ```
