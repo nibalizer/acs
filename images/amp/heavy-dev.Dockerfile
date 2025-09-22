@@ -25,6 +25,8 @@ RUN mkdir -p /go/src /go/bin /go/pkg
 
 # Install Just
 RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+# Install python
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv python3-virtualenv python-is-python3
 
 RUN mkdir /src/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -43,6 +45,7 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 RUN node --version && \
     npm --version && \
     go version && \
+    python --version && \
     just --version
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
