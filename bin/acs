@@ -8,8 +8,8 @@ ACS_DIR="$(dirname "$(realpath "$(command -v "$0")")")"
 
 function usage() {
   command_name=$(basename "$0")
-  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>] [-n|--network <docker network>]"
-  echo "       $command_name resume <scaffold-id> [-t|--thread-id <thread-id>] [-n|--network <docker network>]"
+  echo "Usage: $command_name start <dir> [-s|--scaffold-id <scaffold-id>] [-a|--agent <agent>] [-n|--network <docker network>] [--extra-docker-args <args>]"
+  echo "       $command_name resume <scaffold-id> [-t|--thread-id <thread-id>] [-n|--network <docker network>] [--extra-docker-args <args>]"
   echo "       $command_name clear <all|scaffold-id>"
   echo "       $command_name list"
   echo "       $command_name help"
@@ -91,10 +91,10 @@ function resume_agent() {
 
   if [ -z "$THREAD_ID" ]; then
     echo "Resuming scaffold with ID: $scaffold_id"
-    NETWORK=${NETWORK:-""} "$runagent_script" ~/.acs/"$scaffold_id"/merged
+    NETWORK=${NETWORK:-""} EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS:-""} "$runagent_script" ~/.acs/"$scaffold_id"/merged
   else
     echo "Resuming scaffold with ID: $scaffold_id and thread ID: $THREAD_ID"
-    "NETWORK=${NETWORK:-""} $runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID"
+    NETWORK=${NETWORK:-""} EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS:-""} "$runagent_script" ~/.acs/"$scaffold_id"/merged "$THREAD_ID"
   fi
 }
 
@@ -142,7 +142,7 @@ function start_agent() {
   echo "do your work here:"
   echo "${slug}/merged"
 
-  NETWORK=${NETWORK:-""} "$runagent_script" "$slug"/merged
+  NETWORK=${NETWORK:-""} EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS:-""} "$runagent_script" "$slug"/merged
 
   echo "Work is ready for review here:"
   echo "${slug}/merged"
@@ -188,6 +188,16 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       THREAD_ID="$2"
+      shift
+      shift
+      ;;
+    --extra-docker-args)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --extra-docker-args requires an argument"
+        usage
+        exit 1
+      fi
+      EXTRA_DOCKER_ARGS="$2"
       shift
       shift
       ;;

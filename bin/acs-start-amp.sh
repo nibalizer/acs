@@ -23,11 +23,19 @@ else
     docker_network="--network $NETWORK"
 fi
 
+extra_docker_args=""
+if [ -z $EXTRA_DOCKER_ARGS ]; then
+    :
+else
+    extra_docker_args="$EXTRA_DOCKER_ARGS"
+fi
+
 
 docker run \
     -it \
     --rm \
     $docker_network \
+    $extra_docker_args \
     -e THREAD_ID=$THREAD_ID \
     -v ~/.cache/amp/:/home/amp/.cache/amp/ \
     -v ~/.amp/:/home/amp/.amp \
