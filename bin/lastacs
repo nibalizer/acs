@@ -1,0 +1,6 @@
+#!/bin/bash
+
+last_acs_dir=$(ls -nrt ~/.acs | tail -n 1 | awk '{print $NF}')
+
+cd ~/.acs/${last_acs_dir}/merged
+"last acs dir!" `pwd`
