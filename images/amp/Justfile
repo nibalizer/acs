@@ -1,0 +1,8 @@
+default:
+    just --list
+
+build:
+    docker build -t amprunner -f heavy-dev.Dockerfile .
+
+no-cache-build:
+    docker build -t amprunner -f heavy-dev.Dockerfile --no-cache .
