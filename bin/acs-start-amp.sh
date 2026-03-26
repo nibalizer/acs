@@ -30,15 +30,25 @@ else
     extra_docker_args="$EXTRA_DOCKER_ARGS"
 fi
 
+entrypoint=""
+if [ -n "$DEBUG" ]; then
+    entrypoint="--entrypoint=/bin/$DEBUG"
+fi
 
 docker run \
     -it \
     --rm \
     $docker_network \
     $extra_docker_args \
+    $entrypoint \
     -e THREAD_ID=$THREAD_ID \
+    -v ~/.plumbr/:/home/amp/.plumbr \
     -v ~/.cache/amp/:/home/amp/.cache/amp/ \
     -v ~/.amp/:/home/amp/.amp \
+    -v ~/aisnippets:/aisnippets \
+    -v ~/.gitconfig/:/home/amp/.gitconfig \
+    -v ~/.config/amp/:/home/amp/.config/amp\
+    -v ~/aisnippets:/home/amp/.config/amp/commands \
     -v ~/.local/share/amp/:/home/amp/.local/share/amp \
     -v $CODE_DIR:/src \
     amprunner

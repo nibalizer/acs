@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "Setting up vim connection"
+/opt/nvim-amp-setup.sh
 
 echo "amp --version"
 amp --version

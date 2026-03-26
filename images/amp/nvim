@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "starting nvim process"
+
+echo $$ > /tmp/nvim.pid
+
+sleep infinity
+
